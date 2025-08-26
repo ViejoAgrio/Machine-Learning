@@ -3,36 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
-def import_csv(csv_route):
-    """
-    Importa los datos del archivo CSV a un DataFrame de pandas.
-    """
-    df = pd.read_csv(csv_route)
-    return df
-
-def clean_csv(df):
-    """
-    Elimina las columnas 'name', 'class', 'origin', 'skill_name' y 'dps'.
-    Separa la columna 'skill_cost' en 'inicial_mana' y 'skill_cost'.
-    Convierte las nuevas columnas a tipo numérico.
-    Mueve la columna 'cost' al final del DataFrame.
-    """
-    # Eliminar columnas
-    df = df.drop(['name', 'class', 'origin', 'skill_name'], axis=1)
-    
-    # Separar skill_cost en dos columnas
-    skill_split = df['skill_cost'].str.split('/', expand=True)
-    df['inicial_mana'] = skill_split[0]
-    df['skill_cost'] = skill_split[1]
-    df['inicial_mana'] = pd.to_numeric(df['inicial_mana'], errors='coerce').fillna(0)
-    df['skill_cost'] = pd.to_numeric(df['skill_cost'], errors='coerce').fillna(0)
-    
-    # Mover 'cost' al final
-    cost_col = df.pop('cost')
-    df['cost'] = cost_col
-    # print(df.head())
-    return df
-
 def hypothesis(params, sample):
     """
     Calculates the hypothesis for a given sample and parameters using the MSE function.
@@ -124,26 +94,23 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
         val_df = df.iloc[start:start+x]
         train_df = pd.concat([df.iloc[:start], df.iloc[start+x:]])
 
-        scaler = MinMaxScaler()
         train_features = train_df.drop('cost', axis=1)
-        train_scaled = scaler.fit_transform(train_features)
-        train_samples = train_scaled.tolist()
+        train_samples = train_features.values.tolist()
         train_labels = train_df['cost'].tolist()
 
         params = [1.0] * train_features.shape[1]
 
-        block_epoch_errors = [] 
+        block_epoch_errors = []
 
         for epoch in range(epochs):
             params = gradient_descent(params, train_samples, train_labels, alpha)
             epoch_error = compute_error(params, train_samples, train_labels)
             block_epoch_errors.append(epoch_error)
 
-        __errors__.append(block_epoch_errors) 
+        __errors__.append(block_epoch_errors)
 
         val_features = val_df.drop('cost', axis=1)
-        val_scaled = scaler.transform(val_features)
-        val_samples = val_scaled.tolist()
+        val_samples = val_features.values.tolist()
         val_labels = val_df['cost'].tolist()
 
         preds = [hypothesis(params, sample) for sample in val_samples]
@@ -158,8 +125,7 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
 
 global __errors__
 __errors__ = []
-df = import_csv('./TFT_Champion_CurrentVersion.csv')
-df = clean_csv(df)
+df = pd.read_csv('./TFT_Champion_Transformed.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 block_errors = cross_validate(df, x=5, epochs=1000, alpha=0.1)
 for i in range(len(__errors__)):
