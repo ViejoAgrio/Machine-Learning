@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 
 def clean_csv(df):
@@ -18,6 +19,9 @@ def clean_csv(df):
     df['skill_cost'] = skill_split[1]
     df['inicial_mana'] = pd.to_numeric(df['inicial_mana'], errors='coerce').fillna(0)
     df['skill_cost'] = pd.to_numeric(df['skill_cost'], errors='coerce').fillna(0)
+
+    pd.plotting.scatter_matrix(df) 
+    plt.show()  
     
     # Escalar todas las columnas excepto 'cost'
     features = df.drop('cost', axis=1)
@@ -33,7 +37,6 @@ def clean_csv(df):
 
 df = pd.read_csv('./TFT_Champion_CurrentVersion.csv')
 df = clean_csv(df)
-print(df.head())
 
 # Guardar el DataFrame transformado a un nuevo CSV
 df.to_csv('./TFT_Champion_Transformed.csv', index=False)

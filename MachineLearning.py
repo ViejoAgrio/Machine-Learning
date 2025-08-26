@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 def hypothesis(params, sample):
     """
@@ -47,21 +48,6 @@ def gradient_descent(params, samples, y, alpha):
         temp_params[j] = params[j] - alpha * (gradient / len(samples))
     return temp_params
 
-def predict_champion_cost(params, champ, feature_names, scaler):
-    """
-    Predicts the cost of a new champion based on its features.
-    Args:
-        params (list): The learned parameters from the model.
-        champ (list): The features of the new champion.
-        feature_names (list): The names of the features used in the model.
-        scaler (MinMaxScaler): The scaler used to normalize the features.
-    Returns:
-        float: The predicted cost of the champion.
-    """
-    champ_df = pd.DataFrame([champ], columns=feature_names)
-    champ_scaled = scaler.transform(champ_df)[0]
-    return hypothesis(params, champ_scaled)
-
 def round_off(num):
     """
     Redondea el número al entero más cercano.
@@ -83,13 +69,13 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
     """
     Realiza validación cruzada dividiendo el DataFrame en bloques de tamaño x.
     Entrena con los datos restantes y evalúa con el bloque separado.
-    Guarda el error de entrenamiento de cada época en la variable global __errors__.
+    Retorna el error de entrenamiento de cada época en la variable errors.
     """
-    global __errors__
+
     n = len(df)
     errors = []
-    feature_names = df.drop('cost', axis=1).columns.tolist()
-
+    global all_labels
+    global all_preds
     for start in range(0, n, x):
         val_df = df.iloc[start:start+x]
         train_df = pd.concat([df.iloc[:start], df.iloc[start+x:]])
@@ -115,6 +101,8 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
 
         preds = [hypothesis(params, sample) for sample in val_samples]
         preds = [round_off(p) for p in preds]
+        all_labels = all_labels + val_labels if 'all_labels' in globals() else val_labels
+        all_preds = all_preds + preds if 'all_preds' in globals() else preds
         print(f'Predictions: {preds}')
         print(f'Actual: {val_labels}')
         errors = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
@@ -123,11 +111,30 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
     print(f'\nAverage validation error: {np.mean(errors):.4f}')
     return errors
 
+def confusion_matrix_costs(y_true, y_pred, labels=[1,2,3,4,5,6]):
+    """
+    Muestra la matriz de confusión para los costos predichos vs reales.
+    Args:
+        y_true (list): Lista de costos reales.
+        y_pred (list): Lista de costos predichos.
+        labels (list): Lista de posibles valores de costo.
+    """
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    print("Matriz de confusión (filas: real, columnas: predicho):")
+    print(pd.DataFrame(cm, index=[f"Real {l}" for l in labels], columns=[f"Pred {l}" for l in labels]))
+    plt.figure(figsize=(7,5))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
+    plt.xlabel('Predicción')
+    plt.ylabel('Real')
+    plt.title('Matriz de Confusión de Costos')
+    plt.show()
+
 global __errors__
 __errors__ = []
 df = pd.read_csv('./TFT_Champion_Transformed.csv')
 df = df.sample(frac=1).reset_index(drop=True)
 block_errors = cross_validate(df, x=5, epochs=1000, alpha=0.1)
+confusion_matrix_costs(all_labels, all_preds)
 for i in range(len(__errors__)):
     graph_errors(i)
 
