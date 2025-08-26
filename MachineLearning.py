@@ -30,7 +30,7 @@ def clean_csv(df):
     # Mover 'cost' al final
     cost_col = df.pop('cost')
     df['cost'] = cost_col
-    print(df.head())
+    # print(df.head())
     return df
 
 def hypothesis(params, sample):
@@ -104,8 +104,8 @@ def graph_errors():
     """
     Plots the error values over epochs.
     """
-    plt.plot(__errors__)
-    plt.xlabel('Blocks')
+    plt.plot(__errors__[0])
+    plt.xlabel('Block 0 Epochs')
     plt.ylabel('Mean Error')
     plt.show()
 
@@ -113,33 +113,34 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
     """
     Realiza validación cruzada dividiendo el DataFrame en bloques de tamaño x.
     Entrena con los datos restantes y evalúa con el bloque separado.
-    Imprime el error promedio de predicción para cada bloque.
+    Guarda el error de entrenamiento de cada época en la variable global __errors__.
     """
-
+    global __errors__
     n = len(df)
     errors = []
     feature_names = df.drop('cost', axis=1).columns.tolist()
 
     for start in range(0, n, x):
-        # Separar bloque de validación y de entrenamiento
         val_df = df.iloc[start:start+x]
         train_df = pd.concat([df.iloc[:start], df.iloc[start+x:]])
 
-        # Normalizar usando solo los datos de entrenamiento
         scaler = MinMaxScaler()
         train_features = train_df.drop('cost', axis=1)
         train_scaled = scaler.fit_transform(train_features)
         train_samples = train_scaled.tolist()
         train_labels = train_df['cost'].tolist()
 
-        # Inicializar parámetros
         params = [1.0] * train_features.shape[1]
 
-        # Entrenamiento
+        block_epoch_errors = [] 
+
         for epoch in range(epochs):
             params = gradient_descent(params, train_samples, train_labels, alpha)
+            epoch_error = compute_error(params, train_samples, train_labels)
+            block_epoch_errors.append(epoch_error)
 
-        # Validación
+        __errors__.append(block_epoch_errors) 
+
         val_features = val_df.drop('cost', axis=1)
         val_scaled = scaler.transform(val_features)
         val_samples = val_scaled.tolist()
@@ -150,7 +151,6 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
         print(f'Predictions: {preds}')
         print(f'Actual: {val_labels}')
         block_error = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
-        errors.append(block_error)
         print(f'Block {start//x}: Error = {block_error:.4f}')
 
     print(f'\nAverage validation error: {np.mean(errors):.4f}')
@@ -161,6 +161,6 @@ __errors__ = []
 df = import_csv('./TFT_Champion_CurrentVersion.csv')
 df = clean_csv(df)
 df = df.sample(frac=1).reset_index(drop=True)
-__errors__ = cross_validate(df, x=5, epochs=5000, alpha=0.01)
+block_errors = cross_validate(df, x=5, epochs=5000, alpha=0.01)
 graph_errors()
 
