@@ -100,12 +100,12 @@ def round_off(num):
     """
     return int(num + 0.5)
 
-def graph_errors():
+def graph_errors(index):
     """
     Plots the error values over epochs.
     """
-    plt.plot(__errors__[0])
-    plt.xlabel('Block 0 Epochs')
+    plt.plot(__errors__[index])
+    plt.xlabel(f'Block {index} Epochs')
     plt.ylabel('Mean Error')
     plt.show()
 
@@ -150,8 +150,8 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
         preds = [round_off(p) for p in preds]
         print(f'Predictions: {preds}')
         print(f'Actual: {val_labels}')
-        block_error = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
-        print(f'Block {start//x}: Error = {block_error:.4f}')
+        errors = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
+        print(f'Block {start//x}: Error = {errors:.4f}')
 
     print(f'\nAverage validation error: {np.mean(errors):.4f}')
     return errors
@@ -161,6 +161,7 @@ __errors__ = []
 df = import_csv('./TFT_Champion_CurrentVersion.csv')
 df = clean_csv(df)
 df = df.sample(frac=1).reset_index(drop=True)
-block_errors = cross_validate(df, x=5, epochs=5000, alpha=0.01)
-graph_errors()
+block_errors = cross_validate(df, x=5, epochs=1000, alpha=0.1)
+for i in range(len(__errors__)):
+    graph_errors(i)
 
