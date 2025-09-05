@@ -35,8 +35,8 @@ def clean_csv(df):
     # Mover 'cost' al final (ya está al final)
     return features_scaled_df
 
-df = pd.read_csv('./TFT_Champion_CurrentVersion.csv')
+df = pd.read_csv('./Datasets/TFT_set_10_cubic.csv')
 df = clean_csv(df)
 
 # Guardar el DataFrame transformado a un nuevo CSV
-df.to_csv('./TFT_Champion_Transformed.csv', index=False)
+df.to_csv('./Datasets/TFT_set_10_cubic.csv', index=False)

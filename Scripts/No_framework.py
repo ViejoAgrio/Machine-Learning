@@ -63,8 +63,10 @@ def graph_errors(index):
     """
     Plots the error values over epochs.
     """
-    plt.plot(__errors__[index], label='Entrenamiento')
+    plt.plot(__errors__[index], label='Entrenamiento Cross-Validation')
     plt.plot(__val_errors__[index], label='Validación')
+    plt.plot(__test_errors__, label='Prueba', linestyle='--')
+    plt.plot(__train_errors__, label='Entrenamiento normal', linestyle='--')
     plt.xlabel(f'Block {index} Epochs')
     plt.ylabel('Mean Error')
     plt.legend()
@@ -78,7 +80,7 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
     """
 
     n = len(df)
-    errors = []
+    last_error_block = 0
     global all_labels
     global all_preds
     global __val_errors__
@@ -123,14 +125,14 @@ def cross_validate(df, x=5, epochs=1000, alpha=0.05):
         all_preds = all_preds + preds if 'all_preds' in globals() else preds
         print(f'Predictions: {preds}')
         print(f'Actual: {val_labels}')
-        errors = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
-        print(f'Block {start//x}: Error = {errors:.4f}')
-        __block_errors__.append(errors)
+        last_error_block = np.mean([(p - y) ** 2 for p, y in zip(preds, val_labels)])
+        print(f'Block {start//x}: Error = {last_error_block:.4f}')
+        __block_errors__.append(last_error_block)
 
     print(f'\nAverage validation error: {np.mean(__block_errors__):.4f}')
-    return errors
+    return last_error_block
 
-def confusion_matrix_costs(y_true, y_pred, labels=[1,2,3,4,5,6]):
+def confusion_matrix_costs(y_true, y_pred, labels=[1,2,3,4,5,6], title='Confusion Matrix'):
     """
     Muestra la matriz de confusión para los costos predichos vs reales.
     Args:
@@ -140,22 +142,55 @@ def confusion_matrix_costs(y_true, y_pred, labels=[1,2,3,4,5,6]):
     """
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     # print("Matriz de confusión (filas: real, columnas: predicho):")
-    # print(pd.DataFrame(cm, index=[f"Real {l}" for l in labels], columns=[f"Pred {l}" for l in labels]))
+    #print(pd.DataFrame(cm, index=[f"Real {l}" for l in labels], columns=[f"Pred {l}" for l in labels]))
     plt.figure(figsize=(7,5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
     plt.xlabel('Predicción')
     plt.ylabel('Real')
-    plt.title('Matriz de Confusión de Costos')
+    plt.title('Matriz de Confusión ' + title)
     plt.show()
 
 global __errors__
 __errors__ = []
 global __block_errors__
 __block_errors__ = []
-df = pd.read_csv('./TFT_Champion_Transformed.csv')
-df = df.sample(frac=1).reset_index(drop=True)
-block_errors = cross_validate(df, x=5, epochs=1000, alpha=0.1)
-confusion_matrix_costs(all_labels, all_preds)
+global __test_errors__
+__test_errors__ = []
+global __train_errors__
+__train_errors__ = []
+df_all = pd.read_csv('./Datasets/TFT_set_14_y_15_scaled.csv')
+df_all = df_all.sample(frac=1).reset_index(drop=True)
+epochs = 1000
+alpha = 0.1
+batch = 10
+labels = [1,2,3,4,5,6]
+last_error_block = cross_validate(df_all, batch, epochs, alpha)
+confusion_matrix_costs(all_labels, all_preds, labels, 'de validación cruzada')
+
+all_labels = []
+all_preds = []
+df_train = pd.read_csv('./Datasets/TFT_set_14_y_15_train.csv')
+df_test = pd.read_csv('./Datasets/TFT_set_14_y_15_test.csv')
+train_features = df_train.drop('cost', axis=1)
+train_samples = train_features.values.tolist()
+train_labels = df_train['cost'].tolist()
+test_features = df_test.drop('cost', axis=1)
+test_samples = test_features.values.tolist()
+test_labels = df_test['cost'].tolist()
+params = [1.0] * (train_features.shape[1] + 1)
+for epoch in range(epochs):
+            # Actualizar parámetros y calcular error de entrenamiento
+            params = gradient_descent(params, train_samples, train_labels, alpha)
+            epoch_error = compute_error(params, train_samples, train_labels)
+            __train_errors__.append(epoch_error)
+            # Calcular error de prueba en cada época
+            test_preds = [hypothesis(params, sample) for sample in test_samples]
+            test_epoch_error = np.mean([(p - y) ** 2 for p, y in zip(test_preds, test_labels)])
+            __test_errors__.append(test_epoch_error)
+all_preds = [round_off(p) for p in test_preds]
+all_labels = test_labels
+confusion_matrix_costs(all_labels, all_preds, labels, 'con datos de prueba')
+
 for i in range(len(__errors__)):
     graph_errors(i)
 
