@@ -187,6 +187,7 @@ for epoch in range(epochs):
             test_preds = [hypothesis(params, sample) for sample in test_samples]
             test_epoch_error = np.mean([(p - y) ** 2 for p, y in zip(test_preds, test_labels)])
             __test_errors__.append(test_epoch_error)
+print('Test error:', np.mean(__test_errors__))
 all_preds = [round_off(p) for p in test_preds]
 all_labels = test_labels
 confusion_matrix_costs(all_labels, all_preds, labels, 'con datos de prueba')
