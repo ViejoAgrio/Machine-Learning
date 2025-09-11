@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, recall_score, f1_score, classification_report
 
 def hypothesis(params, sample):
     """
@@ -150,6 +151,18 @@ def confusion_matrix_costs(y_true, y_pred, labels=[1,2,3,4,5,6], title='Confusio
     plt.title('Matriz de Confusión ' + title)
     plt.show()
 
+def print_cls_metrics(y_true, y_pred, labels, title):
+    """
+    Imprime accuracy, recall (macro), F1 (macro) y el classification_report por clase.
+    """
+    acc = accuracy_score(y_true, y_pred)
+    rec_macro = recall_score(y_true, y_pred, labels=labels, average='macro', zero_division=0)
+    f1_macro = f1_score(y_true, y_pred, labels=labels, average='macro', zero_division=0)
+    print(f'\n{title}')
+    print(f'Accuracy: {acc:.4f} | Recall (macro): {rec_macro:.4f} | F1 (macro): {f1_macro:.4f}')
+    print('\nReporte por clase:')
+    print(classification_report(y_true, y_pred, labels=labels, zero_division=0))
+
 global __errors__
 __errors__ = []
 global __block_errors__
@@ -166,6 +179,7 @@ batch = 10
 labels = [1,2,3,4,5,6]
 last_error_block = cross_validate(df_all, batch, epochs, alpha)
 confusion_matrix_costs(all_labels, all_preds, labels, 'de validación cruzada')
+print_cls_metrics(all_labels, all_preds, labels, 'Métricas CV (validación cruzada)')
 
 all_labels = []
 all_preds = []
@@ -187,11 +201,11 @@ for epoch in range(epochs):
             test_preds = [hypothesis(params, sample) for sample in test_samples]
             test_epoch_error = np.mean([(p - y) ** 2 for p, y in zip(test_preds, test_labels)])
             __test_errors__.append(test_epoch_error)
-print('Test error:', np.mean(__test_errors__))
+# print('Test error:', np.mean(__test_errors__))
 all_preds = [round_off(p) for p in test_preds]
 all_labels = test_labels
 confusion_matrix_costs(all_labels, all_preds, labels, 'con datos de prueba')
-
+print_cls_metrics(all_labels, all_preds, labels, 'Métricas Test (hold-out)')
 for i in range(len(__errors__)):
     graph_errors(i)
 

@@ -141,6 +141,15 @@ for train_idx, val_idx in skf.split(X, y):
 
 cm_cv = confusion_matrix(cv_all_true, cv_all_pred, labels=labels_sorted)
 
+print("\nReporte de Clasificación (CV agregada):")
+print(classification_report(
+    cv_all_true,
+    cv_all_pred,
+    labels=labels_sorted,
+    target_names=[str(l) for l in labels_sorted],
+    zero_division=0
+))
+
 # =========================
 # 5. Gráficos (Log Loss y predicciones)
 # =========================
@@ -153,8 +162,8 @@ plot_confusion(cm_cv, labels_sorted, 'Matriz Confusión CV (agregada)')
 # 6. Importancia de características
 # =========================
 importances = pd.Series(clf_holdout.feature_importances_, index=X.columns)
-print("\nImportancia de características (Hold-out model):")
-print(importances.sort_values(ascending=False))
+# print("\nImportancia de características (Hold-out model):")
+# print(importances.sort_values(ascending=False))
 
 plt.figure(figsize=(8,5))
 importances.sort_values(ascending=False).head(15).plot(kind='bar')
